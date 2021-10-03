@@ -10,18 +10,18 @@
 
 
 // atom
-typedef struct LiveMapDataResult {
-      float speedLimit;  // Float32;
+typedef struct LiveNaviDataResult {
+      int speedLimit;  // int;
       float speedLimitDistance;  // Float32;
-      float safetySign;    // Float32;
+      int safetySign;    // int;
       float roadCurvature;    // Float32;
       int turnInfo;    // int;
       float distanceToTurn;    // Float32;
       //bool  mapValid;    // bool;
-      //bool  mapEnable;    // bool;
+      //int  mapEnable;    // bool;
       long  tv_sec;
       long  tv_nsec;
-} LiveMapDataResult;
+} LiveNaviDataResult;
 
 
 int main() {
@@ -32,8 +32,8 @@ int main() {
   bool  sBump = false;
 
   ExitHandler do_exit;
-  PubMaster pm({"liveMapData"});
-  LiveMapDataResult res;
+  PubMaster pm({"liveNaviData"});
+  LiveNaviDataResult res;
 
   log_time last_log_time = {};
   logger_list *logger_list = android_logger_list_alloc(ANDROID_LOG_RDONLY | ANDROID_LOG_NONBLOCK, 0, 0);
@@ -71,7 +71,7 @@ int main() {
       tv_nsec =  entry.tv_sec * 1000ULL + long(tv_nsec2); // per 1000 = 1s
 
       MessageBuilder msg;
-      auto framed = msg.initEvent().initLiveMapData();
+      auto framed = msg.initEvent().initLiveNaviData();
 
    //  opkrspdlimit, opkrspddist, opkrsigntype, opkrcurvangle
 
@@ -140,9 +140,9 @@ int main() {
         }
       }
 
-      framed.setSpeedLimit( res.speedLimit );  // Float32;
+      framed.setSpeedLimit( res.speedLimit );  // int;
       framed.setSpeedLimitDistance( res.speedLimitDistance );  // raw_target_speed_map_dist Float32;
-      framed.setSafetySign( res.safetySign ); // map_sign Float32;
+      framed.setSafetySign( res.safetySign ); // int;
       // framed.setRoadCurvature( res.roadCurvature ); // road_curvature Float32;
       framed.setTurnInfo( res.turnInfo );  // int;
       framed.setDistanceToTurn( res.distanceToTurn );  // Float32;
@@ -152,24 +152,23 @@ int main() {
 
     /*
     signtype
-    signtype
     111 오른쪽 급커브
     112 왼쪽 급커브
     113 굽은도로
     118, 127 어린이보호구역
-    122 : 좁아지는 도로
-    124 : 과속방지턱
-    129 : 주정차
-    131 : 단속카메라(신호위반카메라)  
-    135 : 고정식(버스단속구간)  - 호야
-    150 : 경찰차(이동식단속구간)  - 호야
-    165 : 구간단속    
+    122 좁아지는 도로
+    124 과속방지턱
+    129 주정차
+    131 단속카메라(신호위반카메라)  
+    135 고정식(버스단속구간)  - 호야
+    150 경찰차(이동식단속구간)  - 호야
+    165 구간단속    
     198 차선변경금지시작
     199 차선변경금지종료
     129 주정차금지구간
     123 철길건널목
-    200 : 단속구간(고정형 이동식)
-    231 : 단속(카메라, 신호위반)    
+    200 단속구간(고정형 이동식)
+    231 단속(카메라, 신호위반)
     246 버스전용차로단속
     247 과적단속
     248 교통정보수집
@@ -179,7 +178,7 @@ int main() {
    */  
 
 
-      pm.send("liveMapData", msg);
+      pm.send("liveNaviData", msg);
     }
 
     android_logger_list_free(logger_list);

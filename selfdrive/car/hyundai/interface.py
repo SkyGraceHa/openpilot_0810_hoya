@@ -4,7 +4,6 @@ from panda import Panda
 from common.params import Params
 from selfdrive.config import Conversions as CV
 from selfdrive.car.hyundai.values import CAR, EV_CAR, HYBRID_CAR, Buttons, CarControllerParams
-from selfdrive.car.hyundai.radar_interface import RADAR_START_ADDR
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint
 from selfdrive.car.interfaces import CarInterfaceBase
 from selfdrive.car.disable_ecu import disable_ecu
@@ -26,8 +25,8 @@ class CarInterface(CarInterfaceBase):
     self.mad_mode_enabled = Params().get_bool('MadModeEnabled')
 
   @staticmethod
-  def get_pid_accel_limits(CP, current_speed, cruise_speed):
-    return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
+  def compute_gb(accel, speed):
+    return float(accel) / CarControllerParams.MAX_BRAKE
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value
@@ -35,7 +34,6 @@ class CarInterface(CarInterfaceBase):
 
     ret.carName = "hyundai"
     ret.safetyModel = car.CarParams.SafetyModel.hyundai
-    #ret.radarOffCan = RADAR_START_ADDR not in fingerprint[1]
     ret.radarOffCan = False
     ret.standStill = False
 
@@ -53,6 +51,8 @@ class CarInterface(CarInterfaceBase):
     ret.openpilotLongitudinalControl = Params().get_bool("DisableRadar") or ret.sccBus == 2
     ret.safetyParam = 0
 
+    # Most Hyundai car ports are community features for now
+    ret.communityFeature = False
     ret.pcmCruise = not ret.radarOffCan
 
     ret.steerActuatorDelay = 0.25  # Default delay
@@ -60,21 +60,16 @@ class CarInterface(CarInterfaceBase):
     ret.steerLimitTimer = 0.8
     tire_stiffness_factor = 1.
 
-    ret.stoppingControl = True
-    ret.vEgoStopping = 0.5  # 1.0
-    ret.startAccel = -0.2   # 0.8
-    ret.vEgoStarting = 0.5
-    ret.stopAccel = -0.5  # 0.0
-    ret.stoppingDecelRate = 0.2  # 0.8
-    ret.startingAccelRate = 0.8  # 3.2
-
-    #ret.longitudinalTuning.kpV = [0.1]
-    #ret.longitudinalTuning.kiV = [0.0]
+    ret.gasMaxBP = [0.]    # m/s
+    ret.gasMaxV = [1.5]    # max gas allowed
+    ret.brakeMaxBP = [0.]  # m/s
+    ret.brakeMaxV = [3.0]   # max brake allowed
 
     ret.longitudinalTuning.kpBP = [0., 4., 9., 17., 23., 31.]
-    ret.longitudinalTuning.kpV = [1.2, 1.0, 0.8, 0.65, 0.5, 0.4]
+    ret.longitudinalTuning.kpV = [1.3, 1.2, 1.0, 0.85, 0.6, 0.5]
     ret.longitudinalTuning.kiBP = [0., 4., 9., 17., 23., 31.]
-    ret.longitudinalTuning.kiV = [0.3, 0.24, 0.22, 0.18, 0.15, 0.13]
+    ret.longitudinalTuning.kiV = [0.35, 0.29, 0.27, 0.23, 0.17, 0.15]
+
     ret.longitudinalTuning.deadzoneBP = [0., 4.]
     ret.longitudinalTuning.deadzoneV = [0., 0.1]
     ret.longitudinalTuning.kdBP = [0., 4., 9., 17., 23., 31.]
@@ -82,7 +77,7 @@ class CarInterface(CarInterfaceBase):
     ret.longitudinalTuning.kfBP = [0., 4., 9., 17., 23., 31.]
     ret.longitudinalTuning.kfV = [1., 1., 1., 1., 1., 1.]
 
-    ret.longitudinalActuatorDelayUpperBound = 0.15 # s  1.0
+    ret.startAccel = 0.0
 
     ret.vCruisekph = 0
     ret.resSpeed = 0
@@ -354,7 +349,7 @@ class CarInterface(CarInterfaceBase):
       events.add(EventName.needBrake)
     if self.CC.cruise_gap_adjusting:
       events.add(EventName.gapAdjusting)
-    if (self.CS.on_speed_control and not self.CC.map_enabled) or (self.CC.on_speed_control and self.CC.map_enabled):
+    if self.CC.on_speed_control:
       events.add(EventName.camSpeedDown)
     if self.CC.autohold_popup_timer:
       events.add(EventName.brakeHold)
@@ -413,6 +408,6 @@ class CarInterface(CarInterfaceBase):
                                c.cruiseControl.cancel, c.hudControl.visualAlert, c.hudControl.leftLaneVisible,
                                c.hudControl.rightLaneVisible, c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart,
                                c.hudControl.setSpeed, c.hudControl.leadVisible, c.hudControl.leadDistance,
-                               c.hudControl.leadvRel, c.hudControl.leadyRel, sm)
+                               c.hudControl.leadvRel, c.hudControl.leadyRel, c.hudControl.vFuture, sm)
     self.frame += 1
     return can_sends

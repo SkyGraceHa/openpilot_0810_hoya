@@ -12,12 +12,12 @@
 #include "selfdrive/logcatd/traffic_sign.h"
 
 typedef struct LiveNaviDataResult {
-      float speedLimit;  // Float32;
+      int   speedLimit;  // int;
       float speedLimitDistance;  // Float32;
-      float safetySign;    // Float32;
+      int   safetySign;    // int;
       float roadCurvature;    // Float32;
       int   turnInfo;    // Int32;
-      int   distanceToTurn;    // Int32;      
+      float distanceToTurn;    // Float32;      
       bool  mapValid;    // bool;
       int   mapEnable;    // Int32;
 
@@ -259,8 +259,8 @@ int main() {
 
       //if( opkr )
       //{
-       printf("logcat ID(%d) - PID=%d tag=%d.[%s] \n", log_msg.id(),  entry.pid,  entry.tid, entry.tag);
-       printf("entry.message=[%s]  \n", entry.message );
+      // printf("logcat ID(%d) - PID=%d tag=%d.[%s] \n", log_msg.id(),  entry.pid,  entry.tid, entry.tag);
+      // printf("entry.message=[%s]  \n", entry.message );
       //}
      /*
       pm.send("liveNaviData", msg);

@@ -223,7 +223,7 @@ typedef struct UIScene {
   cereal::ControlsState::Reader controls_state;
   cereal::CarState::GearShifter getGearShifter;
   cereal::LateralPlan::Reader lateral_plan;
-  cereal::LiveMapData::Reader live_map_data;
+  cereal::LiveNaviData::Reader live_navi_data;
 
   // gps
   int satelliteCount;
@@ -269,15 +269,15 @@ typedef struct UIScene {
     bool lanelessModeStatus;
   } lateralPlan;
 
-  struct _LiveMapData
+  struct _LiveNaviData
   {
-    float opkrspeedlimit;
+    int opkrspeedlimit;
     float opkrspeedlimitdist;
-    float opkrspeedsign;
+    int opkrspeedsign;
     float opkrcurveangle;
     int   opkrturninfo;
     float opkrdisttoturn;
-  } liveMapData;
+  } liveNaviData;
 } UIScene;
 
 typedef struct UIState {

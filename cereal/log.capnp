@@ -536,7 +536,7 @@ struct ControlsState @0x97ff69c53601abf1 {
   enabled @19 :Bool;
   active @36 :Bool;
 
-  longControlState @30 :Car.CarControl.Actuators.LongControlState;
+  longControlState @30 :LongControlState;
   vPid @2 :Float32;
   vTargetLead @3 :Float32;
   vCruise @22 :Float32;
@@ -585,6 +585,13 @@ struct ControlsState @0x97ff69c53601abf1 {
     preEnabled @1;
     enabled @2;
     softDisabling @3;
+  }
+
+  enum LongControlState {
+    off @0;
+    pid @1;
+    stopping @2;
+    starting @3;
   }
 
   enum AlertStatus {
@@ -821,19 +828,8 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   jerks @34 :List(Float32);
 
   # opkr
-  dRel1 @35 :Float32;
-  yRel1 @36 :Float32;
-  vRel1 @37 :Float32;
-  dRel2 @38 :Float32;
-  yRel2 @39 :Float32;
-  vRel2 @40 :Float32;
-  status2 @41 :Bool;
-  targetSpeedCamera @42 :Float32;
-  targetSpeedCameraDist @43 :Float32;
-  mapSign @44 :Float32;
-  onSpeedControl @45 :Bool;
-  dynamicTRMode @46 :UInt8;
-  dynamicTRValue @47 :Float32;
+  dynamicTRMode @35 :UInt8;
+  dynamicTRValue @36 :Float32;
 
   enum LongitudinalPlanSource {
     cruise @0;
@@ -903,6 +899,7 @@ struct LateralPlan @0xe1e9318e2ae8b51e {
   vCruiseSet @32 :Float32;
   vCurvature @33 :Float32;
   lanelessMode @34 :Bool;
+  modelSpeed @35 :Float32;
 
   enum Desire {
     none @0;
@@ -1335,17 +1332,37 @@ struct LiveParametersData {
   posenetValid @9 :Bool;
 }
 
-struct LiveMapData {
-  speedLimit @0 :Float32;
+struct LiveNaviData {
+  speedLimit @0 :Int32;
   speedLimitDistance @1 :Float32;
-  safetySign @2 :Float32;
+  safetySign @2 :Int32;
   roadCurvature @3 :Float32;
   turnInfo @4 :Int32;
-  distanceToTurn @5 :Int32;
+  distanceToTurn @5 :Float32;
   ts @6 :UInt64;
 
   mapValid @7 :Bool;
   mapEnable @8 :Int32;
+}
+
+struct LiveMapDataDEPRECATED {
+  speedLimitValid @0 :Bool;
+  speedLimit @1 :Float32;
+  speedAdvisoryValid @12 :Bool;
+  speedAdvisory @13 :Float32;
+  speedLimitAheadValid @14 :Bool;
+  speedLimitAhead @15 :Float32;
+  speedLimitAheadDistance @16 :Float32;
+  curvatureValid @2 :Bool;
+  curvature @3 :Float32;
+  wayId @4 :UInt64;
+  roadX @5 :List(Float32);
+  roadY @6 :List(Float32);
+  lastGps @7: GpsLocationData;
+  roadCurvatureX @8 :List(Float32);
+  roadCurvature @9 :List(Float32);
+  distToTurn @10 :Float32;
+  mapValid @11 :Bool;
 }
 
 struct CameraOdometry {
@@ -1448,8 +1465,8 @@ struct Event {
     deviceState @6 :DeviceState;
     logMessage @18 :Text;
 
-    # Map Info
-    liveMapData @62 :LiveMapData;
+    # OPKR Navi
+    liveNaviData @80 :LiveNaviData;
 
     # *********** debug ***********
     testJoystick @52 :Joystick;
@@ -1468,6 +1485,7 @@ struct Event {
     cellInfoDEPRECATED @28 :List(Legacy.CellInfo);
     wifiScanDEPRECATED @29 :List(Legacy.WifiScan);
     uiNavigationEventDEPRECATED @50 :Legacy.UiNavigationEvent;
+    liveMapDataDEPRECATED @62 :LiveMapDataDEPRECATED;
     gpsPlannerPointsDEPRECATED @40 :Legacy.GPSPlannerPoints;
     gpsPlannerPlanDEPRECATED @41 :Legacy.GPSPlannerPlan;
     applanixRawDEPRECATED @42 :Data;

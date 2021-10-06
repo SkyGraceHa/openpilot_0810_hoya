@@ -82,6 +82,7 @@ class LongControl():
     self.decel_damping = 1.0
     self.decel_damping2 = 1.0
     self.damping_timer = 0
+    self.loc_timer = 0 
 
   def reset(self, v_pid):
     """Reset PID controller and change setpoint"""
@@ -89,6 +90,10 @@ class LongControl():
     self.v_pid = v_pid
 
   def update(self, active, CS, CP, long_plan, radarState):
+    self.loc_timer += 1
+    if self.loc_timer > 100:
+      self.loc_timer = 0
+      self.long_log = Params().get_bool("LongLogDisplay")
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
     # Interp control trajectory
     # TODO estimate car specific lag, use .15s for now
@@ -171,7 +176,7 @@ class LongControl():
       # Keep applying brakes until the car is stopped
       factor = 1
       if long_plan.hasLead:
-        factor = interp(dRel,[2.0,5.5], [10.0,1.0]) if not radar_target_detected else 1
+        factor = interp(dRel,[2.0,5.5], [8.0,1.0]) if not radar_target_detected else 1
       if not CS.standstill or output_gb > -BRAKE_STOPPING_TARGET:
         output_gb -= CP.stoppingBrakeRate / RATE * factor
       elif CS.cruiseState.standstill and output_gb < -BRAKE_STOPPING_TARGET:
@@ -184,7 +189,7 @@ class LongControl():
     elif self.long_control_state == LongCtrlState.starting:
       factor = 1
       if long_plan.hasLead:
-        factor = interp(dRel,[5.5,6.5], [1.0,5.0]) if not radar_target_detected else 1
+        factor = interp(dRel,[5.5,6.5], [1.0,2.0]) if not radar_target_detected else 1
       if output_gb < -0.2:
         output_gb += CP.startingBrakeRate / RATE * factor
       self.reset(CS.vEgo)

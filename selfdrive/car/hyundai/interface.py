@@ -66,9 +66,9 @@ class CarInterface(CarInterfaceBase):
     ret.brakeMaxV = [3.0]   # max brake allowed
 
     ret.longitudinalTuning.kpBP = [0., 4., 9., 17., 23., 31.]
-    ret.longitudinalTuning.kpV = [1.2, 0.95, 0.8, 0.65, 0.5, 0.4]
+    ret.longitudinalTuning.kpV = [1.1, 0.95, 0.8, 0.65, 0.5, 0.4]
     ret.longitudinalTuning.kiBP = [0., 4., 9., 17., 23., 31.]
-    ret.longitudinalTuning.kiV = [0.3, 0.24, 0.22, 0.18, 0.15, 0.13]
+    ret.longitudinalTuning.kiV = [0.28, 0.24, 0.22, 0.18, 0.15, 0.13]
 
     ret.longitudinalTuning.deadzoneBP = [0., 4.]
     ret.longitudinalTuning.deadzoneV = [0., 0.1]
@@ -352,6 +352,8 @@ class CarInterface(CarInterfaceBase):
       events.add(EventName.gapAdjusting)
     if self.CC.on_speed_control and ret.vEgo > 0.3:
       events.add(EventName.camSpeedDown)
+    if self.CC.curv_speed_control and ret.vEgo > 8.3:
+      events.add(EventName.curvSpeedDown)
     if self.CC.autohold_popup_timer:
       events.add(EventName.brakeHold)
     if self.CC.auto_res_starting:

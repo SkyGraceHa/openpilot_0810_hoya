@@ -97,7 +97,7 @@ static void update_model(UIState *s, const cereal::ModelDataV2::Reader &model) {
     max_distance = std::clamp((float)(lead_d - fmin(lead_d * 0.35, 10.)), 0.0f, max_distance);
   }
   max_idx = get_path_length_idx(model_position, max_distance);
-  update_line_data(s, model_position, 0.3, 1.22, &scene.track_vertices, max_idx);
+  update_line_data(s, model_position, 1.0, 1.22, &scene.track_vertices, max_idx);
 }
 
 static void update_sockets(UIState *s) {
@@ -252,6 +252,16 @@ static void update_state(UIState *s) {
     scene.liveNaviData.opkrcurveangle = lm_data.getRoadCurvature();
     scene.liveNaviData.opkrturninfo = lm_data.getTurnInfo();
     scene.liveNaviData.opkrdisttoturn = lm_data.getDistanceToTurn();
+  }
+  if (sm.updated("liveMapData")) {
+    scene.live_map_data = sm["liveMapData"].getLiveMapData();
+    auto lmap_data = sm["liveMapData"].getLiveMapData();
+    scene.liveMapData.ospeedLimit = lmap_data.getSpeedLimit();
+    scene.liveMapData.ospeedLimitAhead = lmap_data.getSpeedLimitAhead();
+    scene.liveMapData.ospeedLimitAheadDistance = lmap_data.getSpeedLimitAheadDistance();
+    scene.liveMapData.oturnSpeedLimit = lmap_data.getTurnSpeedLimit();
+    scene.liveMapData.oturnSpeedLimitEndDistance = lmap_data.getTurnSpeedLimitEndDistance();
+    scene.liveMapData.oturnSpeedLimitSign = lmap_data.getTurnSpeedLimitSign();
   }
   if (sm.updated("sensorEvents")) {
     for (auto sensor : sm["sensorEvents"].getSensorEvents()) {
@@ -419,7 +429,7 @@ QUIState::QUIState(QObject *parent) : QObject(parent) {
   ui_state.sm = std::make_unique<SubMaster, const std::initializer_list<const char *>>({
     "modelV2", "controlsState", "liveCalibration", "deviceState", "roadCameraState",
     "pandaState", "carParams", "driverMonitoringState", "sensorEvents", "carState", "liveLocationKalman",
-    "ubloxGnss", "gpsLocationExternal", "liveParameters", "lateralPlan", "liveNaviData",
+    "ubloxGnss", "gpsLocationExternal", "liveParameters", "lateralPlan", "liveNaviData", "liveMapData",
   });
 
   ui_state.wide_camera = Hardware::TICI() ? Params().getBool("EnableWideCamera") : false;

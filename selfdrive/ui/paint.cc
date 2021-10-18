@@ -98,18 +98,31 @@ static void draw_lead(UIState *s, const cereal::ModelDataV2::LeadDataV3::Reader 
   // Draw lead car indicator
   auto [x, y] = vd;
 
-  float fillAlpha = 0;
-  float speedBuff = 10.;
-  float leadBuff = 40.;
   float d_rel = lead_data.getX()[0];
-  float v_rel = lead_data.getV()[0];
-  if (d_rel < leadBuff) {
-    fillAlpha = 255*(1.0-(d_rel/leadBuff));
-    if (v_rel < 0) {
-      fillAlpha += 255*(-1*(v_rel/speedBuff));
-    }
-    fillAlpha = (int)(fmin(fillAlpha, 255));
-  }
+  // float v_rel = lead_data.getV()[0];
+  // float speedBuff = 10.;
+  // float leadBuff = 40.;  
+  // # chevron
+  // float fillAlpha = 0;
+  // if (d_rel < leadBuff) {
+  //   fillAlpha = 255*(1.0-(d_rel/leadBuff));
+  //   if (v_rel < 0) {
+  //     fillAlpha += 255*(-1*(v_rel/speedBuff));
+  //   }
+  //   fillAlpha = (int)(fmin(fillAlpha, 255));
+  // }
+  // float sz = std::clamp((25 * 30) / (d_rel / 3 + 30), 15.0f, 30.0f) * 2.35;
+  // x = std::clamp(x, 0.f, s->fb_w - sz / 2);
+  // y = std::fmin(s->fb_h - sz * .6, y);
+  // nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+
+  // if (s->scene.radarDistance < 149) {
+  //   draw_chevron(s, x, y, sz, nvgRGBA(201, 34, 49, fillAlpha), COLOR_YELLOW);
+  //   ui_draw_text(s, x, y + sz/1.5f, "R", 20 * 2.5, COLOR_WHITE, "sans-bold"); //neokii
+  // } else {
+  //   draw_chevron(s, x, y, sz, nvgRGBA(165, 255, 135, fillAlpha), COLOR_GREEN);
+  //   ui_draw_text(s, x, y + sz/1.5f, "C", 20 * 2.5, COLOR_BLACK, "sans-bold"); //hoya
+  // }
 
   float sz = std::clamp((30 * 30) / (d_rel / 2 + 15), 12.0f, 60.0f) * 2.35;
   x = std::clamp(x, 0.f, s->fb_w - sz / 2);
@@ -121,9 +134,14 @@ static void draw_lead(UIState *s, const cereal::ModelDataV2::LeadDataV3::Reader 
   int x_l = x - sz_w;
   int y_l = y;
 
-  if (s->scene.radarDistance < 149) {                                         //radar가 인식되면
+  // auto radar_state = (*s->sm)["radarState"].getRadarState();
+  // auto lead_one_radar = radar_state.getLeadOne();
+  // auto lead_two_radar = radar_state.getLeadTwo();
+  // if ((lead_one_radar.getStatus() || lead_one_radar.getStatus()) && 
+  //     (lead_one_radar.getRadar() || lead_two_radar.getRadar())) {            //radar로 인식되면
+  if (s->scene.radarDistance < 149) {
     ui_draw_image(s, {x_l, y_l, sz_w * 2, sz_h}, "lead_under_radar", 0.8f);  
-  } else {                                                                    //camera가 인식되면
+  } else {                                                                   //camera로 인식되면 ???
     ui_draw_image(s, {x_l, y_l, sz_w * 2, sz_h}, "lead_under_camera", 0.8f);  
   }
 }
@@ -326,8 +344,8 @@ static void ui_draw_debug(UIState *s) {
   nvgTextAlign(s->vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_MIDDLE);
 
   if (scene.nDebugUi1) {
-    ui_draw_text(s, ui_viz_rx+200, ui_viz_ry+480, scene.alertTextMsg1.c_str(), 37, COLOR_WHITE_ALPHA(130), "sans-semibold");
-    ui_draw_text(s, ui_viz_rx+200, ui_viz_ry+520, scene.alertTextMsg2.c_str(), 37, COLOR_WHITE_ALPHA(130), "sans-semibold");
+    ui_draw_text(s, ui_viz_rx+200, ui_viz_ry+780, scene.alertTextMsg1.c_str(), 40, COLOR_WHITE_ALPHA(130), "sans-semibold");
+    ui_draw_text(s, ui_viz_rx+200, ui_viz_ry+820, scene.alertTextMsg2.c_str(), 40, COLOR_WHITE_ALPHA(130), "sans-semibold");
   }
 
   
@@ -361,12 +379,12 @@ static void ui_draw_debug(UIState *s) {
       ui_print(s, ui_viz_rx, ui_viz_ry+560, "SL:%.0f", (*s->sm)["carState"].getCarState().getSafetySign());
       ui_print(s, ui_viz_rx, ui_viz_ry+600, "DS:%.0f", (*s->sm)["carState"].getCarState().getSafetyDist());
     }
-    ui_print(s, ui_viz_rx+200, ui_viz_ry+240, "SL:%.0f", scene.liveMapData.ospeedLimit);
-    ui_print(s, ui_viz_rx+200, ui_viz_ry+280, "SLA:%.0f", scene.liveMapData.ospeedLimitAhead);
-    ui_print(s, ui_viz_rx+200, ui_viz_ry+320, "SLAD:%.0f", scene.liveMapData.ospeedLimitAheadDistance);
-    ui_print(s, ui_viz_rx+200, ui_viz_ry+360, "TSL:%.0f", scene.liveMapData.oturnSpeedLimit);
-    ui_print(s, ui_viz_rx+200, ui_viz_ry+400, "TSLED:%.0f", scene.liveMapData.oturnSpeedLimitEndDistance);
-    ui_print(s, ui_viz_rx+200, ui_viz_ry+440, "TSLS:%d", scene.liveMapData.oturnSpeedLimitSign);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+320, "SL:%.0f", scene.liveMapData.ospeedLimit);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+360, "SLA:%.0f", scene.liveMapData.ospeedLimitAhead);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+400, "SLAD:%.0f", scene.liveMapData.ospeedLimitAheadDistance);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+440, "TSL:%.0f", scene.liveMapData.oturnSpeedLimit);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+480, "TSLED:%.0f", scene.liveMapData.oturnSpeedLimitEndDistance);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+520, "TSLS:%d", scene.liveMapData.oturnSpeedLimitSign);
     nvgFontSize(s->vg, 37);
     nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     if (scene.lateralControlMethod == 0) {
@@ -455,7 +473,7 @@ static void ui_draw_vision_brake(UIState *s) {
 
 static void ui_draw_vision_autohold(UIState *s) {
   const UIScene *scene = &s->scene;
-  int autohold = scene->car_state.getAutoHold();
+  int autohold = scene->car_state.getBrakeHold();
   if(autohold < 0)
     return;
 
@@ -521,7 +539,7 @@ static void ui_draw_vision_maxspeed(UIState *s) {
   ui_draw_rect(s->vg, rect, COLOR_WHITE_ALPHA(100), 10, 20.);
 
   nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
-  ui_draw_text(s, rect.centerX()+viz_max_o/2, bdr_s+65, "Max", 30 * 2.2, COLOR_WHITE_ALPHA(is_cruise_set ? 200 : 100), "sans-regular");
+  ui_draw_text(s, rect.centerX()+viz_max_o/2, bdr_s+65, "Max", 30 * 2.2, COLOR_WHITE_ALPHA(is_cruise_set ? 200 : 100), "sans-bold");
   if (is_cruise_set) {
     const std::string maxspeed_str = std::to_string((int)std::nearbyint(maxspeed));
     ui_draw_text(s, rect.centerX()+viz_max_o/2, bdr_s+165, maxspeed_str.c_str(), 48 * 2.3, COLOR_WHITE, "sans-bold");
@@ -553,11 +571,11 @@ static void ui_draw_vision_cruise_speed(UIState *s) {
 
   nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
   if (s->scene.limitSpeedCamera > 29) {
-    ui_draw_text(s, rect.centerX(), bdr_s+65, "Limit", 26 * 2.2, COLOR_WHITE_ALPHA(s->scene.cruiseAccStatus ? 200 : 100), "sans-regular");
+    ui_draw_text(s, rect.centerX(), bdr_s+65, "Limit", 26 * 2.2, COLOR_WHITE_ALPHA(s->scene.cruiseAccStatus ? 200 : 100), "sans-bold");
   } else if (s->scene.cruiseAccStatus) {
-    ui_draw_text(s, rect.centerX(), bdr_s+65, "Cruise", 26 * 2.2, COLOR_WHITE_ALPHA(s->scene.cruiseAccStatus ? 200 : 100), "sans-regular");
+    ui_draw_text(s, rect.centerX(), bdr_s+65, "Cruise", 26 * 2.2, COLOR_WHITE_ALPHA(s->scene.cruiseAccStatus ? 200 : 100), "sans-bold");
   } else {
-    ui_draw_text(s, rect.centerX(), bdr_s+65, "Manual", 26 * 2.2, COLOR_WHITE_ALPHA(s->scene.cruiseAccStatus ? 200 : 100), "sans-regular");
+    ui_draw_text(s, rect.centerX(), bdr_s+65, "Manual", 26 * 2.2, COLOR_WHITE_ALPHA(s->scene.cruiseAccStatus ? 200 : 100), "sans-bold");
   }
   const std::string cruise_speed_str = std::to_string((int)std::nearbyint(cruise_speed));
   if (cruise_speed >= 30 && s->scene.controls_state.getEnabled()) {

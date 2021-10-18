@@ -40,6 +40,11 @@ class NaviControl():
     self.onSpeedControl = False
     self.curvSpeedControl = False
     self.ctrl_speed = 0
+    self.vision_curv_speed = [int(Params().get("VCurvSpeed30", encoding="utf8")), int(Params().get("VCurvSpeed50", encoding="utf8")),
+     int(Params().get("VCurvSpeed70", encoding="utf8")), int(Params().get("VCurvSpeed90", encoding="utf8"))]
+    self.osm_curv_speed_offset = int(Params().get("OCurvOffset", encoding="utf8"))
+    self.osm_wait_timer = 0
+    self.stock_navi_info_enabled = Params().get_bool("StockNaviSpeedEnabled")
 
   def update_lateralPlan(self):
     self.sm.update(0)
@@ -131,7 +136,11 @@ class NaviControl():
     
     #if not mapValid or trafficType == 0:
     #  return  cruise_set_speed_kph
-    if CS.map_enabled and self.liveNaviData.speedLimit > 29:
+
+    if CS.map_enabled and self.liveNaviData.safetySign == 124: #과속방지턱이 있으면 주행속도에 연동하여 제한속도 30km/h까지 가변으로 감속하기
+      cruise_set_speed_kph = interp(v_ego_kph, [40, 50, 60], [30, 35, 40])
+      self.onSpeedControl = True
+    elif CS.map_enabled and self.liveNaviData.speedLimit > 29:
       self.map_speed_dist = max(0, self.liveNaviData.speedLimitDistance - 30)
       self.map_speed = self.liveNaviData.speedLimit
       if self.map_speed_dist > 1250:
@@ -158,7 +167,7 @@ class NaviControl():
         self.onSpeedControl = False
         return cruise_set_speed_kph
       cruise_set_speed_kph = spdTarget + round(spdTarget*0.01*self.map_spdlimit_offset)
-    elif CS.safety_sign > 29:
+    elif CS.safety_sign > 29 and self.stock_navi_info_enabled:
       self.map_speed_dist = max(0, CS.safety_dist - 30)
       self.map_speed = CS.safety_sign
       if CS.safety_block_remain_dist < 255:
@@ -239,17 +248,22 @@ class NaviControl():
 
     if CS.cruise_set_mode in [1,3,4] and CS.out.vEgo * CV.MS_TO_KPH > 40 and modelSpeed < 90 and \
      path_plan.laneChangeState == LaneChangeState.off and not (CS.out.leftBlinker or CS.out.rightBlinker) and not abs(CS.out.steeringTorque) > 170:
-      v_curv_speed = min(var_speed, interp(modelSpeed, [30, 40, 50, 60, 70, 80, 90], [40, 50, 55, 65, 75, 85, 95])) # curve speed ratio
+      v_curv_speed = min(var_speed, interp(modelSpeed, [30, 50, 70, 90], self.vision_curv_speed)) # curve speed ratio
     else:
       v_curv_speed = navi_speed
 
     if CS.cruise_set_mode in [1,3,4]:
       if self.sm['liveMapData'].turnSpeedLimitEndDistance > 30:
-        o_curv_speed = interp(self.sm['liveMapData'].turnSpeedLimit, [30, 35, 40, 50, 60, 70, 80, 90], [35, 40, 45, 60, 65, 75, 85, 95]) # curve speedLimit ratio
+        o_curv_speed = self.sm['liveMapData'].turnSpeedLimit * (1 + (self.osm_curv_speed_offset*0.01))
+        self.osm_wait_timer += 1 if modelSpeed > 90 else 0
+        if self.osm_wait_timer > 100:
+          o_curv_speed = 255
       else:
         o_curv_speed = 255
+        self.osm_wait_timer = 0
     else:
-      o_curv_speed = 255    
+      o_curv_speed = 255
+      self.osm_wait_timer = 0
 
     # self.gasPressed_old = CS.gasPressed
     if var_speed > min(v_curv_speed, o_curv_speed):

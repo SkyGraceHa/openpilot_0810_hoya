@@ -186,10 +186,10 @@ class CarController():
     elif CP.lateralTuning.which() == 'lqr':
       self.str_log2 = 'T={:04.0f}/{:05.3f}/{:07.5f}'.format(CP.lateralTuning.lqr.scale, CP.lateralTuning.lqr.ki, CP.lateralTuning.lqr.dcGain)
 
-    self.sm = messaging.SubMaster(['controlsState'])
+    self.sm = messaging.SubMaster(['controlsState', 'radarState'])
 
   def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert,
-             left_lane, right_lane, left_lane_depart, right_lane_depart, set_speed, lead_visible, lead_dist, lead_vrel, lead_yrel, v_future, sm):
+             left_lane, right_lane, left_lane_depart, right_lane_depart, set_speed, lead_visible, lead_dist, lead_vrel, lead_yrel, v_future):
 
     # *** compute control surfaces ***
 
@@ -210,8 +210,8 @@ class CarController():
     if frame % 10 == 0:
       self.model_speed = path_plan.modelSpeed
 
-    self.dRel = int(sm['radarState'].leadOne.dRel) #EON Lead
-    self.vRel = int(sm['radarState'].leadOne.vRel * 3.6 + 0.5) #EON Lead
+    self.dRel = int(self.sm['radarState'].leadOne.dRel) #EON Lead
+    self.vRel = int(self.sm['radarState'].leadOne.vRel * 3.6 + 0.5) #EON Lead
 
     if CS.out.vEgo > 8:
       if self.variable_steer_max:
@@ -462,7 +462,7 @@ class CarController():
     t_speed = 20 if CS.is_set_speed_in_mph else 30
     if self.auto_res_timer > 0:
       self.auto_res_timer -= 1
-    elif self.model_speed > 95 and self.cancel_counter == 0 and not CS.cruise_active and not CS.out.brakeLights and int(CS.VSetDis) > t_speed and \
+    elif self.model_speed > 95 and self.cancel_counter == 0 and not CS.cruise_active and not CS.out.brakeLights and int(CS.VSetDis) >= t_speed and \
      (1 < CS.lead_distance < 149 or int(CS.clu_Vanz) > t_speed) and int(CS.clu_Vanz) >= 3 and \
      self.opkr_cruise_auto_res and opkr_cruise_auto_res_condition and (self.auto_res_limit_sec == 0 or self.auto_res_limit_timer < self.auto_res_limit_sec):
       if self.opkr_cruise_auto_res_option == 0:

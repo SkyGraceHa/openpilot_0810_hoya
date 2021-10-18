@@ -3337,8 +3337,8 @@ SteerDeltaUpBase::SteerDeltaUpBase() : AbstractControl("SteerDeltaUp기본값", 
     auto str = QString::fromStdString(params.get("SteerDeltaUpBaseAdj"));
     int value = str.toInt();
     value = value + 1;
-    if (value >= 4 ) {
-      value = 4;
+    if (value >= 3 ) {
+      value = 3;
     }
     QString values = QString::number(value);
     params.put("SteerDeltaUpBaseAdj", values.toStdString());
@@ -3384,8 +3384,8 @@ SteerDeltaUpMax::SteerDeltaUpMax() : AbstractControl("SteerDeltaUp최대값", "S
     auto str = QString::fromStdString(params.get("SteerDeltaUpAdj"));
     int value = str.toInt();
     value = value - 1;
-    if (value <= 4 ) {
-      value = 4;
+    if (value <= 3 ) {
+      value = 3;
     }
     QString values = QString::number(value);
     params.put("SteerDeltaUpAdj", values.toStdString());
@@ -3396,8 +3396,8 @@ SteerDeltaUpMax::SteerDeltaUpMax() : AbstractControl("SteerDeltaUp최대값", "S
     auto str = QString::fromStdString(params.get("SteerDeltaUpAdj"));
     int value = str.toInt();
     value = value + 1;
-    if (value >= 7 ) {
-      value = 7;
+    if (value >= 5 ) {
+      value = 5;
     }
     QString values = QString::number(value);
     params.put("SteerDeltaUpAdj", values.toStdString());
@@ -3514,8 +3514,8 @@ SteerDeltaDownMax::SteerDeltaDownMax() : AbstractControl("SteerDeltaDown최대�
     auto str = QString::fromStdString(params.get("SteerDeltaDownAdj"));
     int value = str.toInt();
     value = value + 1;
-    if (value >= 10 ) {
-      value = 10;
+    if (value >= 7 ) {
+      value = 7;
     }
     QString values = QString::number(value);
     params.put("SteerDeltaDownAdj", values.toStdString());
@@ -5035,4 +5035,292 @@ void LiveSRPercent::refresh() {
   }
   btnminus.setText("-");
   btnplus.setText("+");
+}
+
+VCurvSpeed::VCurvSpeed() : AbstractControl("", "", "") {
+
+  btn1.setStyleSheet(R"(
+    padding: -10;
+    border-radius: 35px;
+    font-size: 30px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  btn2.setStyleSheet(R"(
+    padding: -10;
+    border-radius: 35px;
+    font-size: 30px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  btn3.setStyleSheet(R"(
+    padding: -10;
+    border-radius: 35px;
+    font-size: 30px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  btn4.setStyleSheet(R"(
+    padding: -10;
+    border-radius: 35px;
+    font-size: 30px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  label1.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label1.setStyleSheet("color: #e0e879");
+  label2.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label2.setStyleSheet("color: #e0e879");
+  label3.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label3.setStyleSheet("color: #e0e879");
+  label4.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label4.setStyleSheet("color: #e0e879");
+  label1a.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label2a.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label3a.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+  label4a.setAlignment(Qt::AlignVCenter|Qt::AlignLeft);
+
+  hlayout->addWidget(&label1a);
+  hlayout->addWidget(&label1);
+  btn1.setFixedSize(50, 100);
+  label1a.setText("30:");
+  hlayout->addWidget(&btn1);
+  hlayout->addWidget(&label2a);
+  hlayout->addWidget(&label2);
+  btn2.setFixedSize(50, 100);
+  label2a.setText("50:");
+  hlayout->addWidget(&btn2);
+  hlayout->addWidget(&label3a);
+  hlayout->addWidget(&label3);
+  btn3.setFixedSize(50, 100);
+  label3a.setText("70:");
+  hlayout->addWidget(&btn3);
+  hlayout->addWidget(&label4a);
+  hlayout->addWidget(&label4);
+  btn4.setFixedSize(50, 100);
+  label4a.setText("90:");
+  hlayout->addWidget(&btn4);
+
+  QObject::connect(&btn1, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("VCurvSpeed30"));
+    int value = str.toInt();
+    auto str2 = QString::fromStdString(params.get("VCurvSpeed50"));
+    int value2 = str2.toInt();
+    auto str_ud = QString::fromStdString(params.get("VCurvSpeedUD"));
+    if (str_ud == "1") {
+      value = value + 1;
+    } else {
+      value = value - 1;
+    }
+    if (value >= value2 ) {
+      value = value2;
+    } else if (value <= 30 ) {
+      value = 30;
+    }
+    QString values = QString::number(value);
+    params.put("VCurvSpeed30", values.toStdString());
+    refresh1();
+  });
+
+  QObject::connect(&btn2, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("VCurvSpeed50"));
+    int value = str.toInt();
+    auto str0 = QString::fromStdString(params.get("VCurvSpeed30"));
+    int value0 = str0.toInt();
+    auto str2 = QString::fromStdString(params.get("VCurvSpeed70"));
+    int value2 = str2.toInt();
+    auto str_ud = QString::fromStdString(params.get("VCurvSpeedUD"));
+    if (str_ud == "1") {
+      value = value + 1;
+    } else {
+      value = value - 1;
+    }
+    if (value >= value2 ) {
+      value = value2;
+    } else if (value <= value0 ) {
+      value = value0;
+    }
+    QString values = QString::number(value);
+    params.put("VCurvSpeed50", values.toStdString());
+    refresh2();
+  });
+  
+  QObject::connect(&btn3, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("VCurvSpeed70"));
+    int value = str.toInt();
+    auto str0 = QString::fromStdString(params.get("VCurvSpeed50"));
+    int value0 = str0.toInt();
+    auto str2 = QString::fromStdString(params.get("VCurvSpeed90"));
+    int value2 = str2.toInt();
+    auto str_ud = QString::fromStdString(params.get("VCurvSpeedUD"));
+    if (str_ud == "1") {
+      value = value + 1;
+    } else {
+      value = value - 1;
+    }
+    if (value >= value2 ) {
+      value = value2;
+    } else if (value <= value0 ) {
+      value = value0;
+    }
+    QString values = QString::number(value);
+    params.put("VCurvSpeed70", values.toStdString());
+    refresh3();
+  });
+
+  QObject::connect(&btn4, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("VCurvSpeed90"));
+    int value = str.toInt();
+    auto str0 = QString::fromStdString(params.get("VCurvSpeed70"));
+    int value0 = str0.toInt();
+    auto str_ud = QString::fromStdString(params.get("VCurvSpeedUD"));
+    if (str_ud == "1") {
+      value = value + 1;
+    } else {
+      value = value - 1;
+    }
+    if (value <= value0 ) {
+      value = value0;
+    } else if (value >= 90 ) {
+      value = 90;
+    }
+    QString values = QString::number(value);
+    params.put("VCurvSpeed90", values.toStdString());
+    refresh4();
+  });
+
+  refresh1();
+  refresh2();
+  refresh3();
+  refresh4();
+}
+
+void VCurvSpeed::refresh1() {
+  auto strs = QString::fromStdString(params.get("VCurvSpeed30"));
+  int valuei = strs.toInt();
+  QString valuefs = QString::number(valuei);
+  label1.setText(QString::fromStdString(valuefs.toStdString()));
+  btn1.setText("↕");
+}
+void VCurvSpeed::refresh2() {
+  auto strs = QString::fromStdString(params.get("VCurvSpeed50"));
+  int valuei = strs.toInt();
+  QString valuefs = QString::number(valuei);
+  label2.setText(QString::fromStdString(valuefs.toStdString()));
+  btn2.setText("↕");
+}
+void VCurvSpeed::refresh3() {
+  auto strs = QString::fromStdString(params.get("VCurvSpeed70"));
+  int valuei = strs.toInt();
+  QString valuefs = QString::number(valuei);
+  label3.setText(QString::fromStdString(valuefs.toStdString()));
+  btn3.setText("↕");
+}
+void VCurvSpeed::refresh4() {
+  auto strs = QString::fromStdString(params.get("VCurvSpeed90"));
+  int valuei = strs.toInt();
+  QString valuefs = QString::number(valuei);
+  label4.setText(QString::fromStdString(valuefs.toStdString()));
+  btn4.setText("↕");
+}
+
+VCurvSpeedUD::VCurvSpeedUD() : AbstractControl("커브감속정도 조정(모델속도: km/h)", "모델속도에 따른 커브감속 속도를 조정합니다.(보간값)", "../assets/offroad/icon_shell.png") {
+
+  btn.setStyleSheet(R"(
+    padding: 0;
+    border-radius: 50px;
+    font-size: 35px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  btn.setFixedSize(125, 100);
+  hlayout->addWidget(&btn);
+
+  QObject::connect(&btn, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("VCurvSpeedUD"));
+    int value = str.toInt();
+    value = value + 1;
+    if (value >= 2 ) {
+      value = 0;
+    }
+    QString values = QString::number(value);
+    params.put("VCurvSpeedUD", values.toStdString());
+    refresh();
+  });
+  refresh();
+}
+
+void VCurvSpeedUD::refresh() {
+  auto strs = QString::fromStdString(params.get("VCurvSpeedUD"));
+  if (strs == "1") {
+    btn.setText("↑");
+  } else {
+    btn.setText("↓");
+  }
+}
+
+OCurvOffset::OCurvOffset() : AbstractControl("OSM 커브 속도 오프셋(%)", "OSM 커브 속도를 조정합니다.(+값: 속도를 높임, -값: 속도를 낮춤", "../assets/offroad/icon_shell.png") {
+
+  label.setAlignment(Qt::AlignVCenter|Qt::AlignRight);
+  label.setStyleSheet("color: #e0e879");
+  hlayout->addWidget(&label);
+
+  btnminus.setStyleSheet(R"(
+    padding: 0;
+    border-radius: 50px;
+    font-size: 35px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  btnplus.setStyleSheet(R"(
+    padding: 0;
+    border-radius: 50px;
+    font-size: 35px;
+    font-weight: 500;
+    color: #E4E4E4;
+    background-color: #393939;
+  )");
+  btnminus.setFixedSize(150, 100);
+  btnplus.setFixedSize(150, 100);
+  hlayout->addWidget(&btnminus);
+  hlayout->addWidget(&btnplus);
+
+  QObject::connect(&btnminus, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("OCurvOffset"));
+    int value = str.toInt();
+    value = value - 1;
+    if (value <= -50 ) {
+      value = -50;
+    }
+    QString values = QString::number(value);
+    //QUIState::ui_state.speed_lim_off = value;
+    params.put("OCurvOffset", values.toStdString());
+    refresh();
+  });
+  
+  QObject::connect(&btnplus, &QPushButton::clicked, [=]() {
+    auto str = QString::fromStdString(params.get("OCurvOffset"));
+    int value = str.toInt();
+    value = value + 1;
+    if (value >= 50 ) {
+      value = 50;
+    }
+    QString values = QString::number(value);
+    //QUIState::ui_state.speed_lim_off = value;
+    params.put("OCurvOffset", values.toStdString());
+    refresh();
+  });
+  refresh();
+}
+
+void OCurvOffset::refresh() {
+  label.setText(QString::fromStdString(params.get("OCurvOffset")));
+  btnminus.setText("－");
+  btnplus.setText("＋");
 }

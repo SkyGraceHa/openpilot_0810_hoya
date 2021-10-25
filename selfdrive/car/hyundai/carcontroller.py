@@ -6,7 +6,7 @@ from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfahda_mfc, create_hda_mfc, \
                                              create_scc11, create_scc12, create_scc13, create_scc14, \
                                              create_scc42a, create_scc7d0, create_mdps12
-from selfdrive.car.hyundai.values import Buttons, CarControllerParams, CAR, FEATURES
+from selfdrive.car.hyundai.values import Buttons, CarControllerParams, CAR, FEATURES, STEER_THRESHOLD
 from opendbc.can.packer import CANPacker
 from selfdrive.controls.lib.longcontrol import LongCtrlState
 from selfdrive.car.hyundai.carstate import GearShifter
@@ -118,6 +118,7 @@ class CarController():
     self.opkr_variablecruise = self.params.get_bool("OpkrVariableCruise")
     self.opkr_autoresume = self.params.get_bool("OpkrAutoResume")
     self.opkr_cruisegap_auto_adj = self.params.get_bool("CruiseGapAdjust")
+    self.opkr_drivingcruisegap_auto_adj = self.params.get_bool("DrivingCruiseGapAdjust")
     self.opkr_cruise_auto_res = self.params.get_bool("CruiseAutoRes")
     self.opkr_cruise_auto_res_option = int(self.params.get("AutoResOption", encoding="utf8"))
     self.opkr_cruise_auto_res_condition = int(self.params.get("AutoResCondition", encoding="utf8"))
@@ -177,6 +178,7 @@ class CarController():
     self.on_speed_control = False
     self.curv_speed_control = False
     self.vFuture = 0
+    self.cruise_init = False
 
     if CP.lateralTuning.which() == 'pid':
       self.str_log2 = 'T={:0.2f}/{:0.3f}/{:0.2f}/{:0.5f}'.format(CP.lateralTuning.pid.kpV[1], CP.lateralTuning.pid.kiV[1], CP.lateralTuning.pid.kdV[0], CP.lateralTuning.pid.kf)
@@ -243,9 +245,9 @@ class CarController():
 
     # disable when temp fault is active, or below LKA minimum speed
     if self.opkr_maxanglelimit >= 90 and not self.steer_wind_down_enabled:
-      lkas_active = enabled and abs(CS.out.steeringAngleDeg) < self.opkr_maxanglelimit and CS.out.gearShifter == GearShifter.drive
+      lkas_active = enabled and abs(CS.out.steeringAngleDeg) < self.opkr_maxanglelimit and CS.out.gearShifter == GearShifter.drive and abs(CS.out.steeringTorque) < 250
     else:
-      lkas_active = enabled and not CS.out.steerWarning and CS.out.gearShifter == GearShifter.drive
+      lkas_active = enabled and not CS.out.steerWarning and CS.out.gearShifter == GearShifter.drive and abs(CS.out.steeringTorque) < 250
 
 
     if (( CS.out.leftBlinker and not CS.out.rightBlinker) or ( CS.out.rightBlinker and not CS.out.leftBlinker)) and CS.out.vEgo < LANE_CHANGE_SPEED_MIN and self.opkr_turnsteeringdisable:
@@ -259,7 +261,7 @@ class CarController():
     if self.emergency_manual_timer > 0:
       self.emergency_manual_timer -= 1
 
-    if abs(CS.out.steeringTorque) > 170 and CS.out.vEgo < LANE_CHANGE_SPEED_MIN:
+    if abs(CS.out.steeringTorque) > STEER_THRESHOLD and CS.out.vEgo < LANE_CHANGE_SPEED_MIN:
       self.driver_steering_torque_above = True
     else:
       self.driver_steering_torque_above = False
@@ -338,26 +340,35 @@ class CarController():
       can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL, clu11_speed, CS.CP.sccBus))
 
     # 차간거리를 주행속도에 맞춰 변환하기
-    if CS.acc_active and not CS.out.gasPressed and not CS.out.brakePressed:
-      if (CS.out.vEgo * CV.MS_TO_KPH) >= 80: # 시속 80킬로 이상 GAP_DIST 4칸 유지
-        self.cruise_gap_auto_switch_timer += 1
-        if self.cruise_gap_auto_switch_timer > 25 and (CS.cruiseGapSet != 4.0) :
-          can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST)) if not self.longcontrol \
-            else can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST, clu11_speed, CS.CP.sccBus))
-          self.cruise_gap_auto_switch_timer = 0
-        if CS.cruiseGapSet == 4.0:
-          self.cruise_gap_auto_switch_timer = 0
-      elif (CS.out.vEgo * CV.MS_TO_KPH) >= 20 :# 시속 20킬로 이상 GAP_DIST 3칸 만들기
-        self.cruise_gap_auto_switch_timer += 1
-        if self.cruise_gap_auto_switch_timer > 25 and (CS.cruiseGapSet != 3.0) :
-          can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST)) if not self.longcontrol \
-            else can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST, clu11_speed, CS.CP.sccBus))
-          self.cruise_gap_auto_switch_timer = 0
-        if CS.cruiseGapSet == 3.0:
-          self.cruise_gap_auto_switch_timer = 0          
-      else:
-        self.cruise_gap_auto_switch_timer += 1 
-        # pass
+    if self.opkr_drivingcruisegap_auto_adj :
+      if CS.acc_active and not CS.out.gasPressed and not CS.out.brakePressed:
+        if (CS.out.vEgo * CV.MS_TO_KPH) >= 85: # 시속 85킬로 이상 GAP_DIST 4칸 유지
+          self.cruise_gap_auto_switch_timer += 1
+          if self.cruise_gap_auto_switch_timer > 20 and (CS.cruiseGapSet != 4.0) :
+            can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST)) if not self.longcontrol \
+              else can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST, clu11_speed, CS.CP.sccBus))
+            self.cruise_gap_auto_switch_timer = 0
+          if CS.cruiseGapSet == 4.0:
+            self.cruise_gap_auto_switch_timer = 0
+        elif (CS.out.vEgo * CV.MS_TO_KPH) >= 45 :# 시속 40킬로 이상 GAP_DIST 3칸 유지
+          self.cruise_gap_auto_switch_timer += 1
+          if self.cruise_gap_auto_switch_timer > 20 and (CS.cruiseGapSet != 3.0) :
+            can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST)) if not self.longcontrol \
+              else can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST, clu11_speed, CS.CP.sccBus))
+            self.cruise_gap_auto_switch_timer = 0
+          if CS.cruiseGapSet == 3.0:
+            self.cruise_gap_auto_switch_timer = 0  
+        elif (CS.out.vEgo * CV.MS_TO_KPH) >= 20 :# 시속 20킬로 이상 GAP_DIST 2칸 유지지
+          self.cruise_gap_auto_switch_timer += 1
+          if self.cruise_gap_auto_switch_timer > 20 and (CS.cruiseGapSet != 2.0) :
+            can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST)) if not self.longcontrol \
+              else can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.GAP_DIST, clu11_speed, CS.CP.sccBus))
+            self.cruise_gap_auto_switch_timer = 0
+          if CS.cruiseGapSet == 2.0:
+            self.cruise_gap_auto_switch_timer = 0          
+        else:
+          self.cruise_gap_auto_switch_timer += 1 
+          # pass
     if CS.out.cruiseState.standstill:
       self.standstill_status = 1
       if self.opkr_autoresume:
@@ -435,10 +446,13 @@ class CarController():
       self.cruise_gap_adjusting = False
       self.auto_res_starting = False
 
+    if not enabled:
+      self.cruise_init = False
     if CS.cruise_buttons == 4:
       self.cancel_counter += 1
       self.auto_res_starting = False
     elif CS.cruise_active:
+      self.cruise_init = True
       self.cancel_counter = 0
       self.auto_res_limit_timer = 0
       if self.res_speed_timer > 0:
@@ -463,7 +477,7 @@ class CarController():
     if self.auto_res_timer > 0:
       self.auto_res_timer -= 1
     elif self.model_speed > 95 and self.cancel_counter == 0 and not CS.cruise_active and not CS.out.brakeLights and int(CS.VSetDis) >= t_speed and \
-     (1 < CS.lead_distance < 149 or int(CS.clu_Vanz) > t_speed) and int(CS.clu_Vanz) >= 3 and \
+     (1 < CS.lead_distance < 149 or int(CS.clu_Vanz) > t_speed) and int(CS.clu_Vanz) >= 3 and self.cruise_init and \
      self.opkr_cruise_auto_res and opkr_cruise_auto_res_condition and (self.auto_res_limit_sec == 0 or self.auto_res_limit_timer < self.auto_res_limit_sec):
       if self.opkr_cruise_auto_res_option == 0:
         can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL)) if not self.longcontrol \
@@ -600,8 +614,8 @@ class CarController():
     str_log1 = 'MD={}  BS={:1.0f}/{:1.0f}  CV={:03.0f}  TQ={:03.0f}  ST={:03.0f}/{:01.0f}/{:01.0f}  FR={:03.0f}'.format(
       CS.out.cruiseState.modeSel, CS.CP.mdpsBus, CS.CP.sccBus, self.model_speed, abs(new_steer), self.p.STEER_MAX, self.p.STEER_DELTA_UP, self.p.STEER_DELTA_DOWN, self.timer1.sampleTime())
     if CS.out.cruiseState.accActive:
-      str_log2 = 'AQ={:+04.2f}  VF={:03.0f}  TS={:03.0f}  SS={:03.0f}  CS={:03.0f}  RD/RV={:04.1f}/{:03.1f}  CG={:1.0f}  FR={:03.0f}'.format(
-       self.aq_value if self.longcontrol else CS.scc12["aReqValue"], v_future, self.NC.ctrl_speed , setSpeed, round(CS.out.cruiseState.speed*CV.MS_TO_KPH), CS.lead_distance, CS.lead_objspd, CS.cruiseGapSet, self.timer1.sampleTime())
+      str_log2 = 'AQ={:+04.2f}  VF={:03.0f}  TS={:03.0f}  SS={:03.0f}  RD/RV={:04.1f}/{:03.1f}  CG={:1.0f}  FR={:03.0f}'.format(
+       self.aq_value if self.longcontrol else CS.scc12["aReqValue"], v_future, self.NC.ctrl_speed , setSpeed, CS.lead_distance, CS.lead_objspd, CS.cruiseGapSet, self.timer1.sampleTime())
     else:
       str_log2 = 'MDPS={}  LKAS={}  LEAD={}  AQ={:+04.2f}  VF={:03.0f}  CG={:1.0f}  FR={:03.0f}'.format(
        CS.out.steerWarning, CS.lkas_button_on, 0 < CS.lead_distance < 149, self.aq_value if self.longcontrol else CS.scc12["aReqValue"], v_future, CS.cruiseGapSet, self.timer1.sampleTime())

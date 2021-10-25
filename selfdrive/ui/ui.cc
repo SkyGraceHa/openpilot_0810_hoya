@@ -146,6 +146,8 @@ static void update_state(UIState *s) {
     }
     scene.brakePress = cs_data.getBrakePressed();
     scene.brakeLights = cs_data.getBrakeLights();
+    scene.currentGear = cs_data.getCurrentGear();
+    scene.electGearStep = cs_data.getElectGearStep();
     scene.getGearShifter = cs_data.getGearShifter();
     scene.leftBlinker = cs_data.getLeftBlinker();
     scene.rightBlinker = cs_data.getRightBlinker();
@@ -262,6 +264,10 @@ static void update_state(UIState *s) {
     scene.liveMapData.oturnSpeedLimit = lmap_data.getTurnSpeedLimit();
     scene.liveMapData.oturnSpeedLimitEndDistance = lmap_data.getTurnSpeedLimitEndDistance();
     scene.liveMapData.oturnSpeedLimitSign = lmap_data.getTurnSpeedLimitSign();
+    auto turn_speed_ahead = lmap_data.getTurnSpeedLimitsAhead();
+    for (int i = 0; i < std::size(scene.liveMapData.oturnSpeedLimitsAhead); i++) {
+      scene.liveMapData.oturnSpeedLimitsAhead[i] = turn_speed_ahead[i];
+    }
   }
   if (sm.updated("sensorEvents")) {
     for (auto sensor : sm["sensorEvents"].getSensorEvents()) {

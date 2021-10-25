@@ -385,6 +385,10 @@ static void ui_draw_debug(UIState *s) {
     ui_print(s, ui_viz_rx+200, ui_viz_ry+440, "TSL:%.0f", scene.liveMapData.oturnSpeedLimit);
     ui_print(s, ui_viz_rx+200, ui_viz_ry+480, "TSLED:%.0f", scene.liveMapData.oturnSpeedLimitEndDistance);
     ui_print(s, ui_viz_rx+200, ui_viz_ry+520, "TSLS:%d", scene.liveMapData.oturnSpeedLimitSign);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+560, "TSL0:%.0f", scene.liveMapData.oturnSpeedLimitsAhead[0]);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+600, "TSL1:%.0f", scene.liveMapData.oturnSpeedLimitsAhead[1]);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+640, "TSL2:%.0f", scene.liveMapData.oturnSpeedLimitsAhead[2]);
+    ui_print(s, ui_viz_rx+200, ui_viz_ry+680, "TSL3:%.0f", scene.liveMapData.oturnSpeedLimitsAhead[3]);    
     nvgFontSize(s->vg, 37);
     nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     if (scene.lateralControlMethod == 0) {
@@ -407,30 +411,46 @@ static void ui_draw_debug(UIState *s) {
   brake @7;
   eco @8;
 */
+
 static void ui_draw_gear( UIState *s ) {
   const UIScene &scene = s->scene;  
-  NVGcolor nColor = COLOR_WHITE;
-  int x_pos = s->fb_w - (90 + bdr_s);
-  int y_pos = bdr_s + 140;
+
+  const int w = 180;
+  const int h = 180;
+  const int x = 15*2 + 180;
+  const int y = 700;
+  const int gear_num_x = x + 90 + 60;
+  const int gear_num_y = y + 90 + 55;
   int ngetGearShifter = int(scene.getGearShifter);
-  //int  x_pos = 1795;
-  //int  y_pos = 155;
-  char str_msg[512];
+  // char str_msg[512];
+  char strGear[512]; 
 
+  // NVGcolor nColor = COLOR_WHITE;
   nvgFontFace(s->vg, "sans-bold");
-  nvgFontSize(s->vg, 160 );
-  switch( ngetGearShifter )
-  {
-    case 1 : strcpy( str_msg, "P" ); nColor = nvgRGBA(200, 200, 255, 255); break;
-    case 2 : strcpy( str_msg, "D" ); nColor = COLOR_GREEN; break;
-    case 3 : strcpy( str_msg, "N" ); nColor = COLOR_WHITE; break;
-    case 4 : strcpy( str_msg, "R" ); nColor = COLOR_RED; break;
-    case 7 : strcpy( str_msg, "B" ); break;
-    default: sprintf( str_msg, "%d", ngetGearShifter ); break;
-  }
+  nvgFontSize(s->vg, 90);
+  nvgFillColor(s->vg, COLOR_GREEN);
+  ui_draw_image(s, {x, y, w, h}, "gear_BG", 0.6f);
 
-  nvgFillColor(s->vg, nColor);
-  ui_print( s, x_pos, y_pos, str_msg );
+  if (s->scene.controls_state.getEnabled() && (s->scene.currentGear < 9) && (s->scene.currentGear !=0)) {
+    ui_draw_image(s, {x, y, w, h}, "gear_D", 1.0f);
+    snprintf(strGear, sizeof(strGear), "%.0f", s->scene.currentGear);    
+    ui_print( s, gear_num_x, gear_num_y, strGear );
+  } else if (s->scene.controls_state.getEnabled() && (s->scene.electGearStep < 9) && (s->scene.electGearStep !=0)) {
+    ui_draw_image(s, {x, y, w, h}, "gear_D", 1.0f);
+    snprintf(strGear, sizeof(strGear), "%.0f", s->scene.electGearStep);  
+    ui_print( s, gear_num_x, gear_num_y, strGear );
+  } else {
+    switch( ngetGearShifter ) {
+      case 1 : ui_draw_image(s, {x, y, w, h}, "gear_P", 1.0f); break;
+      case 2 : ui_draw_image(s, {x, y, w, h}, "gear_D", 1.0f); break;
+      case 3 : ui_draw_image(s, {x, y, w, h}, "gear_N", 1.0f); break;
+      case 4 : ui_draw_image(s, {x, y, w, h}, "gear_R", 1.0f); break;
+      case 7 : ui_draw_image(s, {x, y, w, h}, "gear_R", 1.0f); break;
+      default: ui_draw_image(s, {x, y, w, h}, "gear_X", 1.0f); break;
+    }
+    // nvgFillColor(s->vg, nColor);
+    // ui_print( s, center_x, center_y, str_msg );
+  }
 }
 
 static void ui_draw_vision_face(UIState *s) {
@@ -668,16 +688,14 @@ static void ui_draw_vision_event(UIState *s) {
   const int bg_wheel_y = viz_event_y + (bg_wheel_size/2);
   const QColor &color = bg_colors[s->status];
   NVGcolor nvg_color = nvgRGBA(color.red(), color.green(), color.blue(), color.alpha());
-  if (s->scene.controls_state.getEnabled() || s->scene.forceGearD || s->scene.comma_stock_ui) {
-    float angleSteers = s->scene.car_state.getSteeringAngleDeg();
-    if (s->scene.controlAllowed) {
-      ui_draw_circle_image_rotation(s, bg_wheel_x, bg_wheel_y+20, bg_wheel_size, "wheel", nvg_color, 1.0f, angleSteers);
-    } else {
-      ui_draw_circle_image_rotation(s, bg_wheel_x, bg_wheel_y+20, bg_wheel_size, "wheel", nvgRGBA(0x17, 0x33, 0x49, 0xc8), 1.0f, angleSteers);
-    }
+
+  float angleSteers = s->scene.car_state.getSteeringAngleDeg();
+  if (s->scene.controlAllowed) {
+    ui_draw_circle_image_rotation(s, bg_wheel_x, bg_wheel_y+20, bg_wheel_size, "wheel", nvg_color, 1.0f, angleSteers);
   } else {
-    if (!s->scene.comma_stock_ui) ui_draw_gear(s);
+    ui_draw_circle_image_rotation(s, bg_wheel_x, bg_wheel_y+20, bg_wheel_size, "wheel", nvgRGBA(0x17, 0x33, 0x49, 0xc8), 1.0f, angleSteers);
   }
+
   if (!s->scene.comma_stock_ui) ui_draw_debug(s);
 }
 
@@ -1249,8 +1267,9 @@ static void ui_draw_blindspot_mon(UIState *s) {
 
 static void ui_draw_vision_footer(UIState *s) {
   ui_draw_vision_face(s);
-  if (!s->scene.comma_stock_ui){
+  if (!s->scene.comma_stock_ui){    
     ui_draw_vision_scc_gap(s);
+    ui_draw_gear(s);    
     ui_draw_vision_brake(s);
     ui_draw_vision_autohold(s);
   }
@@ -1435,10 +1454,9 @@ static void ui_draw_vision(UIState *s) {
   }
   // Set Speed, Current Speed, Status/Events
   ui_draw_vision_header(s);
-  if ((*s->sm)["controlsState"].getControlsState().getAlertSize() == cereal::ControlsState::AlertSize::NONE) {
-    ui_draw_vision_footer(s);
-    ui_draw_blindspot_mon(s);
-  }
+  ui_draw_vision_footer(s);
+  ui_draw_blindspot_mon(s);
+
   if (scene->live_tune_panel_enable) {
     ui_draw_live_tune_panel(s);
   }
@@ -1533,6 +1551,12 @@ void ui_nvg_init(UIState *s) {
     {"lead_radar", "../assets/addon/img/lead_radar.png"},
     {"lead_under_radar", "../assets/addon/img/lead_underline_radar.png"},
     {"lead_under_camera", "../assets/addon/img/lead_underline_camera.png"},
+    {"gear_P", "../assets/addon/img/gearP.png"},
+    {"gear_R", "../assets/addon/img/gearR.png"},
+    {"gear_N", "../assets/addon/img/gearN.png"},
+    {"gear_D", "../assets/addon/img/gearD.png"},
+    {"gear_X", "../assets/addon/img/gearX.png"},
+    {"gear_BG", "../assets/addon/img/gearBG.png"},    
     {"tire_pressure", "../assets/images/img_tire_pressure.png"},
   };
   for (auto [name, file] : images) {

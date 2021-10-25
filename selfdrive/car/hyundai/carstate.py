@@ -1,5 +1,6 @@
 import copy
 from cereal import car
+import cereal.messaging as messaging
 from selfdrive.car.hyundai.values import DBC, STEER_THRESHOLD, FEATURES, EV_CAR, HYBRID_CAR, Buttons
 from selfdrive.car.interfaces import CarStateBase
 from opendbc.can.parser import CANParser
@@ -66,6 +67,8 @@ class CarState(CarStateBase):
     self.cruise_set_speed_kph = 0
     self.cruise_set_mode = int(Params().get("CruiseStatemodeSelInit", encoding="utf8"))
     self.gasPressed = False
+
+    self.sm = messaging.SubMaster(['controlsState'])
 
   def set_cruise_speed(self, set_speed):
     self.cruise_set_speed_kph = set_speed
@@ -273,6 +276,8 @@ class CarState(CarStateBase):
     if self.cs_timer > 100:
       self.cs_timer = 0
       self.map_enabled = Params().get_bool("OpkrMapEnable")
+    self.sm.update(0)
+    vCruiseMax = self.sm['controlsState'].vCruise
     self.safety_sign_check = cp.vl["NAVI"]["OPKR_S_Sign"]
     if cp.vl["NAVI"]["OPKR_S_Dist"] < 1023:
       self.safety_dist = cp.vl["NAVI"]["OPKR_S_Dist"]
@@ -282,31 +287,31 @@ class CarState(CarStateBase):
       self.safety_dist = 0
     self.safety_block_remain_dist = cp.vl["NAVI"]["OPKR_SBR_Dist"]
     self.is_highway = cp_scc.vl["SCC11"]["Navi_SCC_Camera_Act"] != 0.
-    if self.safety_sign_check in [24., 25., 26.] and not self.is_highway and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH) <= 69:
+    if self.safety_sign_check in [24., 25., 26.] and not self.is_highway and 29 < round(vCruiseMax) <= 69:
       self.safety_sign = 30.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [0., 1., 2.] and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH) <= 79:
+    elif self.safety_sign_check in [0., 1., 2.] and 29 < round(vCruiseMax) <= 79:
       self.safety_sign = 40.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [8., 9., 10.] and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH) <= 89:
+    elif self.safety_sign_check in [8., 9., 10.] and 29 < round(vCruiseMax) <= 89:
       self.safety_sign = 50.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [16., 17., 18.] and not self.is_highway and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH):
+    elif self.safety_sign_check in [16., 17., 18.] and not self.is_highway and 29 < round(vCruiseMax):
       self.safety_sign = 60.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [24., 25., 26.] and not self.is_highway and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH):
+    elif self.safety_sign_check in [24., 25., 26.] and not self.is_highway and 29 < round(vCruiseMax):
       self.safety_sign = 70.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [0., 1., 2.] and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH):
+    elif self.safety_sign_check in [0., 1., 2.] and 29 < round(vCruiseMax):
       self.safety_sign = 80.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [8., 9., 10.] and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH):
+    elif self.safety_sign_check in [8., 9., 10.] and 29 < round(vCruiseMax):
       self.safety_sign = 90.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [16., 17., 18.] and self.is_highway and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH):
+    elif self.safety_sign_check in [16., 17., 18.] and self.is_highway and 29 < round(vCruiseMax):
       self.safety_sign = 100.
       self.safety_sign_last = self.safety_sign
-    elif self.safety_sign_check in [24., 25., 26.] and self.is_highway and 29 < round(ret.cruiseState.speed*CV.MS_TO_KPH):
+    elif self.safety_sign_check in [24., 25., 26.] and self.is_highway and 29 < round(vCruiseMax):
       self.safety_sign = 110.
       self.safety_sign_last = self.safety_sign
     elif round(self.safety_block_remain_dist) < 255. and self.safety_sign_prev:
@@ -327,6 +332,7 @@ class CarState(CarStateBase):
     # as this seems to be standard over all cars, but is not the preferred method.
     if self.CP.carFingerprint in FEATURES["use_cluster_gears"]:
       gear = cp.vl["CLU15"]["CF_Clu_Gear"]
+      ret.electGearStep = cp.vl["LVR11"]["CF_Lvr_CGear"]
     elif self.CP.carFingerprint in FEATURES["use_tcu_gears"]:
       gear = cp.vl["TCU12"]["CUR_GR"]
     elif self.CP.carFingerprint in FEATURES["use_elect_gears"]:
@@ -340,6 +346,14 @@ class CarState(CarStateBase):
       ret.gearShifter = GearShifter.drive
     else:
       ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(gear))
+
+    if not self.CP.carFingerprint in FEATURES["use_elect_gears"]:
+      if self.CP.carFingerprint in FEATURES["use_cluster_gears"]:
+        ret.currentGear = cp.vl["TCU12"]["CUR_GR"]
+      elif self.CP.carFingerprint in FEATURES["use_tcu_gears"]:
+        ret.currentGear = cp.vl["TCU12"]["CUR_GR"]
+      else:
+        ret.currentGear = cp.vl["LVR11"]["CF_Lvr_CGear"]
 
     if self.CP.fcaBus != -1 or self.CP.carFingerprint in FEATURES["use_fca"]:
       ret.stockAeb = cp_fca.vl["FCA11"]["FCA_CmdAct"] != 0
@@ -433,6 +447,9 @@ class CarState(CarStateBase):
 
       ("ESC_Off_Step", "TCS15", 0),
       ("AVH_LAMP", "TCS15", 0),
+
+      ("CF_Lvr_CGear", "LVR11", 0), 
+      ("CF_Lvr_GearInf", "LVR11", 0),  #Transmission Gear (0=N or P, 1~8=D, 14=R)
 
       ("CF_Lvr_CruiseSet", "LVR12", 0),
       ("CRUISE_LAMP_M", "EMS16", 0),
